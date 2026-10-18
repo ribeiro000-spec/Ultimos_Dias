@@ -53,3 +53,9 @@ export function portrait(look){
  if(ex==3)o+=`<path d="M${cx-fw+2} ${cy+4}Q${cx} ${cy+fh+8} ${cx+fw-2} ${cy+4}Q${cx} ${cy+16} ${cx-fw+2} ${cy+4}Z" fill="${hc}" stroke="#000"/>`;
  if(ex==4)o+=rc(cx-16,cy-22,18,8,'#eee','stroke="#000" transform="rotate(-12 48 28)"');
  return o+'</svg>'}
+
+export function figLayer(o){const r=R((o.seed||1)*5+3),B=340;let s='';const f=o.fig;
+ if(f=='m')for(let i=0;i<(o.n||2);i++)s+=man(250+i*150+r()*80,B+55+i*10,1.2-i*.12,'m');
+ if(f=='g')for(let i=0;i<4;i++)s+=man(270+i*70+r()*20,B+60+(i%2)*12,1.2,i==1?'g':'p');
+ if(f=='l')s+=man(400,B+78,1.45,'l');
+ return`<svg class="figs" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${s}</svg>`}

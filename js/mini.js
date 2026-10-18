@@ -37,7 +37,7 @@ export function runMini(el,m,done){
   el.onclick=e=>{if(e.target.closest('[data-go]'))hit()};const key=e=>{if(e.code=='Space'){e.preventDefault();hit()}};addEventListener('keydown',key);cl.push(()=>removeEventListener('keydown',key))},
  wires(){
   const g=genWires(m.seed);let tries=m.tries,as=[-1,-1,-1,-1],msg='';
-  const draw=()=>{el.innerHTML=`<p class="mut">Pistas gravadas na caixa:</p><ul class="clues">${g.clues.map(c=>`<li>${c}</li>`).join('')}</ul>${WN.map((n,w)=>`<div class="wrow"><b>${n}</b>${[0,1,2,3].map(t=>`<button data-w="${w}" data-t="${t}" class="${as[w]==t?'on':''}" aria-pressed="${as[w]==t}">${as[w]==t?'✔ ':''}${t+1}</button>`).join('')}</div>`).join('')}<p>${msg||'Tentativas: '+tries}</p><div class="row2"><button data-test="1" ${as.includes(-1)?'disabled':''}>Testar ligação</button><button data-quit="1" class="ghost">Desistir</button></div>`};draw();
+  const draw=()=>{el.innerHTML=`<img class="mimg" src="assets/scenes/fusebox.jpg" alt="Caixa de fusíveis com fios soltos"><p class="mut">Pistas gravadas na caixa:</p><ul class="clues">${g.clues.map(c=>`<li>${c}</li>`).join('')}</ul>${WN.map((n,w)=>`<div class="wrow"><b>${n}</b>${[0,1,2,3].map(t=>`<button data-w="${w}" data-t="${t}" class="${as[w]==t?'on':''}" aria-pressed="${as[w]==t}">${as[w]==t?'✔ ':''}${t+1}</button>`).join('')}</div>`).join('')}<p>${msg||'Tentativas: '+tries}</p><div class="row2"><button data-test="1" ${as.includes(-1)?'disabled':''}>Testar ligação</button><button data-quit="1" class="ghost">Desistir</button></div>`};draw();
   el.onclick=e=>{const b=e.target.closest('button');if(!b)return;sfx.click();
    if(b.dataset.quit)return done({ok:0});
    if(b.dataset.w){const w=+b.dataset.w,t=+b.dataset.t;as=as.map(x=>x==t?-1:x);as[w]=t;return draw()}

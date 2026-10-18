@@ -3,17 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050505">
 <title>Últimos Dias</title>
 <link rel="icon" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Special+Elite&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="art" aria-hidden="true"></div><div id="fx" aria-hidden="true"></div>
 <header id="hud" hidden>
  <div id="stats"></div>
- <div class="btns"><button id="bSound" aria-label="Som">♪</button><button id="bPanel" aria-label="Mostrar informações">☰</button></div>
+ <div class="btns"><button id="bSound" class="icon" aria-label="Som"></button><button id="bPanel" class="icon" aria-label="Abrir ou fechar informações">☰</button></div>
 </header>
-<main id="box" hidden><p id="txt" aria-live="polite"></p><div id="mini"></div><div id="ch"></div></main>
+<main id="box" hidden><div id="tag"></div><div id="news" hidden></div><p id="txt" aria-live="polite"></p><div id="mini"></div><div id="ch"></div></main>
+<div id="shade" hidden></div>
 <aside id="panel" hidden></aside>
 <div id="card" hidden></div>
 <div id="menu" hidden></div>

@@ -1,5 +1,10 @@
 import * as G from './engine.js';
 import {RES,LOCS,UPG,BASES,STARTS} from './data.js';
+const INTRO=[['city','URGENTE · Surto de vírus desconhecido se espalha por três capitais','Tudo começou como uma notícia distante, entre um café e outro. Um vírus novo. Casos isolados. Nada com que se preocupar, disseram os apresentadores, sorrindo.','alert'],
+['shelter','HOSPITAIS LOTADOS · Pacientes perdem a consciência e atacam equipes médicas','Em poucos dias, os hospitais não comportavam mais ninguém. Os infectados já não reconheciam rostos. Só fome. Só fúria.','static'],
+['ruins','FORÇAS POLICIAIS FALHAM EM CONTER ATAQUES NO CENTRO','A polícia tentou. O exército tentou. As barricadas caíram em horas. As ruas viraram corredores de fumaça e sirenes sem resposta.','static'],
+['shelter','COMUNICADO DO GOVERNO · Permaneçam trancados em casa. Cuidem de si mesmos.','O último comunicado foi curto: fiquem trancados e cuidem de si mesmos. Depois, a imagem tremeu, o rádio chiou, e a voz nunca mais voltou.','alert'],
+['road','','Semanas depois, a comida acabou. Você e Lívia, sua esposa, deixam o apartamento ao amanhecer, com mochilas leves e pés pesados. Ela aperta sua mão. "Juntos", diz. É tudo o que vocês têm.','']];
 const {A,rnd,pick,log,alive,add}=G;
 const Lc=id=>LOCS.find(l=>l.id==id),comp=s=>alive(s).filter(v=>v.id!=s.player),pl=s=>s.survivors.find(v=>v.id==s.player);
 const PTS=s=>s.time.remaining;
@@ -17,7 +22,7 @@ const OPEN=[['Os primeiros dias são os mais barulhentos: sirenes, vidro quebran
 ['Faz tanto tempo que você não lembra do som de uma cidade viva. Só restam o vento e o que ele carrega.','Cada amanhecer é uma pequena vitória e uma pequena dívida.','O mundo lá fora virou uma conta que ninguém consegue pagar. Mesmo assim, você acorda.']];
 export function startDay(s){G.startDay(s);const d=s.day,n=alive(s).length;
  let t=({rain:'A chuva bate no telhado como dedos impacientes. ',fog:'Uma névoa densa engoliu a rua. ',clear:''})[s.weather];
- t+=d==1?'Você tranca a porta e encosta a testa na madeira fria. Sozinho, o silêncio pesa. Primeiro passo: descobrir o que o abrigo guarda e quem ainda respira lá fora.':pick(s,OPEN[d<=5?0:d<=12?1:2]);
+ t+=d==1?'Você e Lívia trancam a porta e encostam as costas na madeira fria. Lá fora, o silêncio pesa. Primeiro passo: descobrir o que o abrigo guarda e quem ainda respira por perto.':pick(s,OPEN[d<=5?0:d<=12?1:2]);
  if(s.resources.food<n*2)t+=' O estômago aperta: a comida está acabando.';if(s.resources.water<n*2)t+=' Os lábios rachados lembram que a água também.';
  const c=comp(s);if(c.length)t+=' '+pick(s,c).name+' já está de pé, vigiando a janela.';
  if(s.base.damage>20)t+=' As paredes rangem; o abrigo carrega as cicatrizes dos ataques.';if(G.threat(s)>45)t+=' Há mais gente, e mais coisas, rondando do que ontem.';
@@ -42,12 +47,13 @@ function trip(s,c){
  else go(s,'arrive',c)}
 const talk=['Os ferimentos e a história conferem: ele fala a verdade.','Alguns detalhes não batem. Ele omite algo.','Marcas de bota recentes e um rádio escondido: ele observa a base.'];
 export const SC={
-prologue:s=>({bg:{kind:s.start,night:1,seed:s.seed},text:STARTS[s.start]+' O mundo que você conhecia durou pouco. Agora você precisa de um teto antes do anoitecer.',choices:[{l:'Levantar-se',fn:s=>go(s,'map')}]}),
-map:s=>({bg:{kind:s.start,night:1,seed:s.seed},text:'No bolso, um mapa dobrado marca três lugares. Há força para chegar a apenas um deles antes que escureça.',
+...Object.fromEntries(INTRO.map(([k,n,x,f],i)=>['intro'+(i+1),s=>({bg:{kind:k,night:i<4&&i!=2?1:0,seed:s.seed+i},news:n,sfx:f,text:x,choices:[{l:i<4?'Continuar':'Seguir em frente',fn:s=>go(s,i<4?'intro'+(i+2):'prologue')},...(i<4?[{l:'Pular introdução',fn:s=>go(s,'prologue')}]:[])]})])),
+prologue:s=>({bg:{kind:s.start,night:1,seed:s.seed},text:STARTS[s.start]+' Lívia aperta sua mão. O mundo que vocês conheciam durou pouco, e agora é preciso um teto antes do anoitecer.',choices:[{l:'Levantar-se',fn:s=>go(s,'map')}]}),
+map:s=>({bg:{kind:s.start,night:1,seed:s.seed},text:'Lívia desdobra um mapa amassado com três lugares marcados. Há força para chegar a apenas um deles antes que escureça. Vocês decidem juntos.',
  choices:['police','bunker','farm'].map((id,i,a)=>a[(i+s.seed)%3]).map(id=>({l:BASES[id].name+' — '+BASES[id].tease,fn:s=>{G.chooseBase(s,id);go(s,'travel',{b:id})}}))}),
-travel:(s,c)=>({bg:{kind:'road',night:0,seed:s.seed,fig:'l'},text:'Você caminha até as pernas tremerem. Ao fim da tarde, '+BASES[c.b].name.toLowerCase()+' surge no horizonte. Você tranca a porta atrás de si e confere o que sobrou: '+Object.entries(s.resources).filter(([k,v])=>v).map(([k,v])=>v+' '+RES[k].toLowerCase()).join(', ')+'.',
+travel:(s,c)=>({bg:{kind:{police:'ruins',bunker:'forest',farm:'snow'}[c.b],night:0,seed:s.seed},text:'Vocês caminham até as pernas tremerem. Ao fim da tarde, '+BASES[c.b].name.toLowerCase()+' surge no horizonte. Lívia trava a porta atrás de vocês e confere o que sobrou: '+Object.entries(s.resources).filter(([k,v])=>v).map(([k,v])=>v+' '+RES[k].toLowerCase()).join(', ')+'.',
  choices:[{l:'Entrar e esperar a noite',fn:s=>{startDay(s);go(s,'daycard')}}]}),
-daycard:s=>({bg:base(s,{night:1}),card:'Dia '+s.day+' após o apocalipse',next:s=>go(s,'dayIntro')}),
+daycard:s=>({bg:base(s,{night:1}),card:{n:s.day},next:s=>go(s,'dayIntro')}),
 dayIntro:s=>({bg:base(s),text:s.dayText,choices:[{l:s.day==1?'Esperar':'Começar o dia',fn:morning}]}),
 out:(s,c)=>({bg:c.bg||base(s),text:c.t,choices:[{l:'Continuar',fn:s=>go(s,c.next,c.nctx)}]}),
 hub:s=>({bg:base(s),text:PTS(s)>=3?'O dia ainda permite decisões. Tempo restante: '+PTS(s)+' PT. O que fazer agora?':'A luz está acabando. Resta pouco a fazer além de se preparar para a noite.',
@@ -62,7 +68,7 @@ locPick:s=>({bg:base(s),text:'Para onde ir? Quanto mais longe, mais tempo e mais
 party:(s,c)=>({bg:base(s),text:'Alguém vai com você? Quem sai não defende a base durante a noite.',
  choices:[{l:'Ir sozinho',fn:s=>trip(s,{loc:c.loc,party:[s.player]})},...comp(s).map(v=>({l:'Levar '+v.name+' ('+v.skill+')',fn:s=>trip(s,{loc:c.loc,party:[s.player,v.id]})}))]}),
 arrive:(s,c)=>({bg:at(s,c.loc),text:Lc(c.loc).arr,choices:[{l:'Revistar o local',fn:s=>go(s,'search',{...c})},...(['workshop','radio'].includes(c.loc)?[{l:'Abrir a porta lacrada (painel elétrico)',off:c.wired,fn:s=>go(s,'wires',{...c,wired:1,ms:Math.floor(rnd(s)*1e9)})}]:[]),{l:'Voltar à base sem arriscar',fn:s=>out(s,'Você decide não tentar a sorte e volta antes de escurecer.')}]}),
-search:(s,c)=>({bg:at(s,c.loc,{night:s.time.remaining<4}),text:'Você vasculha o local com cuidado, ouvidos atentos.',mini:{type:'search',seed:c.ms,risk:Lc(c.loc).risk,tries:7+(party(s,c).some(v=>v.skill=='Batedor')?1:0)},
+search:(s,c)=>({bg:at(s,c.loc,{night:s.time.remaining<4}),text:'Você vasculha o local com cuidado, ouvidos atentos.',mini:{type:'search',seed:c.ms,risk:Lc(c.loc).risk,tries:7+(party(s,c).some(v=>(v.skill=='Batedor'||v.skill=='Explorador'))?1:0)},
  done:(s,c,r)=>{const t=G.loot(s,c.loc,c.party,r.found/r.total);if(r.danger)out(s,t+' Um som úmido atrás de você: algo estava escondido ali!','monster',{...c,n:1,after:'hub'},at(s,c.loc,{fig:'m',n:1}));else out(s,t+' Você volta à base antes de escurecer.')}}),
 monster:(s,c)=>({bg:at(s,c.loc,{fig:'m',n:c.n,night:s.time.remaining<5}),text:(c.n>1?c.n+' infectados surgem':'Um infectado surge')+' da escuridão, atraído'+(c.n>1?'s':'')+' pelo ruído. O ar fica pesado.',
  choices:[{l:'Lutar com arma (2 munição)',res:{ammunition:2},fn:s=>go(s,'fight',{...c,gun:1})},{l:'Lutar corpo a corpo',fn:s=>go(s,'fight',{...c,gun:0})},{l:'Fugir',fn:s=>go(s,'flee',c)},
@@ -75,7 +81,7 @@ fight:(s,c)=>({bg:at(s,c.loc,{fig:'m',n:c.n}),text:c.gun?'Você mira com as mão
   else{const n=hurtOne(s,c,35-8*h,'ferimentos em combate');out(s,n+' é derrubado e ferido. Você recua para a base, sangrando.','hub')}}}),
 flee:(s,c)=>({bg:at(s,c.loc,{fig:'m',n:c.n}),text:'Você corre. O som de passos arrastados fica cada vez mais perto.',mini:{type:'timing',label:'Fuga',rounds:2,zone:.3,speed:1.1},
  done:(s,c,h)=>{if(h>=1)out(s,'Você despista a criatura num beco e volta, ofegante, para a base.');else{const n=hurtOne(s,c,18,'fuga mal sucedida');out(s,n+' tropeça e é arranhado, mas consegue chegar à base.')}}}),
-group:(s,c)=>({bg:at(s,c.loc,{fig:'g'}),text:'Um grupo de sobreviventes armados bloqueia o caminho. Ninguém abaixa a arma ainda.',choices:[
+group:(s,c)=>({bg:at(s,'help',{fig:'g'}),text:'Um grupo de sobreviventes armados bloqueia o caminho. Ninguém abaixa a arma ainda.',choices:[
  {l:'Observar de longe',pt:1,off:c.obs,fn:s=>{c.obs=1;out(s,{friendly:'Parecem cansados e dividem uma lata entre si.',hostile:'Olhares frios, dedos nos gatilhos; vigiam suas mochilas.',deceptive:'Sorrisos demais. Um deles faz sinais para alguém fora de vista.'}[c.g],'group',c)}},
  {l:'Negociar (2 comida)',res:{food:2},fn:s=>{if(c.g=='friendly'){add(s,'medicine',1);const k=pick(s,LOCS).id;s.visits[k]=0;out(s,'Eles trocam informações por comida e indicam um local ainda intocado: '+Lc(k).name+'. Ainda dão 1 medicamento.','arrive',c)}
   else if(c.g=='hostile'){add(s,'food',-3);out(s,'Pegam a comida e ainda levam mais 3. Você recua de mãos vazias.')}else out(s,'Aceitam a comida e dão uma dica falsa. Você perde tempo e volta de mãos vazias.')}},
@@ -113,13 +119,13 @@ e_radio:s=>({bg:base(s,{night:1}),text:'O rádio chia e revela uma frase entreco
  {l:'Anotar e investigar',pt:1,fn:s=>{s.flags.radio=s.day;const L=pick(s,LOCS);s.visits[L.id]=0;out(s,'Você anota as coordenadas: '+L.name+' voltou a ter recursos.')}},{l:'Desligar o rádio',fn:s=>{s.flags.radio=s.day;out(s,'Silêncio. Nada de novo.')}}]}),
 e_fire:s=>({bg:base(s,{night:1}),text:'Faíscas no corredor. Um incêndio começa a se espalhar pelas paredes.',choices:[
  {l:'Combater com água (2)',res:{water:2},fn:s=>out(s,'Fogo apagado a tempo.')},{l:'Ignorar',fn:s=>{s.base.damage=Math.min(60,s.base.damage+10);add(s,'materials',-2);out(s,'O fogo consome materiais e fere a estrutura (−10 segurança).')}}]}),
-build:s=>({bg:base(s),text:'O que reforçar? Cada obra leva 3 PT.',choices:[...Object.entries(UPG).map(([id,u])=>{const own=!u.rep&&s.base.upgrades.includes(id)||(id=='barricade'&&G.count(s,id)>=3);
+build:s=>({bg:base(s,{kind:'build'}),text:'O que reforçar? Cada obra leva 3 PT.',choices:[...Object.entries(UPG).map(([id,u])=>{const own=!u.rep&&s.base.upgrades.includes(id)||(id=='barricade'&&G.count(s,id)>=3);
  return{l:(own?'✔ ':'')+u.name+' · '+Object.entries(u.cost).map(([k,v])=>v+' '+RES[k].toLowerCase()).join(' + '),pt:3,res:u.cost,off:own,fn:s=>{s.base.upgrades.push(id);log(s,'Construído: '+u.name.split(' (')[0]+'.');out(s,'Você trabalha até as mãos sangrarem. '+u.name.split(' (')[0]+' pronto.','build')}}}),{l:'Voltar',fn:s=>go(s,'hub')}]}),
-camp:s=>({bg:base(s),text:'O abrigo precisa de cuidados. Estrutura: dano '+s.base.damage+', segurança '+G.security(s)+'.',choices:[
+camp:s=>({bg:base(s,{kind:'shelter'}),text:'O abrigo precisa de cuidados. Estrutura: dano '+s.base.damage+', segurança '+G.security(s)+'.',choices:[
  {l:'Reparar estrutura · 2 PT · 2 materiais',pt:2,res:{materials:2},off:!s.base.damage,fn:s=>{s.base.damage=Math.max(0,s.base.damage-12);out(s,'Tábuas, pregos e paciência: a estrutura está mais firme.','camp')}},
  {l:'Fabricar munição · 2 PT · 3 materiais',pt:2,res:{materials:3},off:!s.base.upgrades.includes('workshop'),fn:s=>{const a=add(s,'ammunition',4);out(s,'Você improvisa '+a+' munições na bancada.','camp')}},
  ...alive(s).filter(v=>v.health<100).map(v=>({l:'Tratar '+v.name+' · 1 PT · 1 medicamento',pt:1,res:{medicine:1},fn:s=>{const h=20+(s.base.upgrades.includes('infirmary')?10:0)+Math.max(...alive(s).map(x=>x.medicine));v.health=Math.min(100,v.health+h);out(s,v.name+' recupera '+h+' de saúde.','camp')}})),
- ...comp(s).filter(v=>!v.checked||v.checked=='Inconclusivo').map(v=>({l:'Interrogar '+v.name+' · 2 PT',pt:2,fn:s=>go(s,'probe',{id:v.id,ms:Math.floor(rnd(s)*1e9)})})),
+ ...comp(s).filter(v=>!v.wife&&(!v.checked||v.checked=='Inconclusivo')).map(v=>({l:'Interrogar '+v.name+' · 2 PT',pt:2,fn:s=>go(s,'probe',{id:v.id,ms:Math.floor(rnd(s)*1e9)})})),
  {l:'Voltar',fn:s=>go(s,'hub')}]}),
 wires:(s,c)=>({bg:at(s,c.loc),text:'Uma porta de aço lacrada e um painel exposto com quatro fios soltos. Ligue cada fio ao terminal certo usando as pistas gravadas na caixa.',
  mini:{type:'wires',seed:c.ms,tries:3+(party(s,c).some(v=>v.skill=='Eletricista')?1:0)},
@@ -131,7 +137,7 @@ probe:(s,c)=>{const v=s.survivors.find(x=>x.id==c.id);return{bg:base(s),text:'Vo
   else if(r.verdict=='guilty'){v.loyalty=Math.max(0,v.loyalty-25);v.morale-=10;v.checked='Acusado injustamente';out(s,'Você acusou um inocente. '+v.name+' perde a confiança em você (−25 lealdade).','camp')}
   else if(!bad){v.loyalty=Math.min(100,v.loyalty+8);v.checked='Sem indícios';out(s,'Você confia em '+v.name+', e a confiança é devolvida (+8 lealdade).','camp')}
   else{v.checked='Inconclusivo';out(s,'Você libera '+v.name+', mas algo continua não fechando.','camp')}}}},
-dusk:s=>({bg:base(s,{night:1,fig:'m'}),text:'O alarme improvisado dispara: latas batendo no arame. Vultos se aproximam do abrigo por mais de uma entrada. É agora.',choices:[
+dusk:s=>({bg:base(s,{kind:'attack'}),text:'O alarme improvisado dispara: latas batendo no arame. Vultos se aproximam do abrigo por mais de uma entrada. É agora.',choices:[
  {l:'Defender com arma (2 munição)',res:{ammunition:2},fn:s=>go(s,'defense',{gun:1})},{l:'Defender com o que houver',fn:s=>go(s,'defense',{gun:0})}]}),
-defense:(s,c)=>{const C=alive(s).filter(v=>v.health>25&&!s.out.includes(v.id)).length;return{bg:base(s,{night:1,fig:'m'}),text:'Cada entrada é um ponto fraco. Barre quem chegar primeiro, antes que passe da porta.',
+defense:(s,c)=>{const C=alive(s).filter(v=>v.health>25&&!s.out.includes(v.id)).length;return{bg:base(s,{kind:'attack'}),text:'Cada entrada é um ponto fraco. Barre quem chegar primeiro, antes que passe da porta.',
  mini:{type:'defense',rounds:6,time:1300+120*C+(c.gun?350:0),gun:c.gun},done:(s,c,h)=>go(s,'night',{L:G.endDay(s,{attack:true,A:+(h/6*2.5).toFixed(1)})})}}};
