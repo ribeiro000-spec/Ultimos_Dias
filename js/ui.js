@@ -1,82 +1,53 @@
 import * as G from './engine.js';
-import {RES,LOCS,UPG} from './data.js';
-import {EVENTS} from './events.js';
-const app=document.getElementById('app');
-let S=null,squad=new Set(),toast='',view='menu';
+import * as ST from './story.js';
+import {scene,portrait} from './gfx.js';
+import * as au from './audio.js';
+import {runMini} from './mini.js';
+import {RES,UPG} from './data.js';
+const $=q=>document.querySelector(q);
+let S=null,view='menu',artKey='',typer=null,stop=null,cardT=null,rec=false,toastT=null;
 const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const costTxt=c=>Object.entries(c).map(([k,v])=>v+' '+RES[k].toLowerCase()).join(' + ');
-const bar=(v,m=100)=>`<div class="bar ${v/m<.3?'low':''}"><i style="width:${Math.max(0,Math.min(100,v/m*100))}%"></i></div>`;
-const riskTxt=r=>r>=.4?'risco alto ▲▲▲':r>=.25?'risco médio ▲▲':'risco baixo ▲';
-const logHtml=n=>S.history.slice(0,n).map(h=>`<p><span>Dia ${h.d}</span> ${esc(h.t)}</p>`).join('');
-
+const cost=c=>[c.pt?c.pt+' PT':'',...Object.entries(c.res||{}).map(([k,v])=>v+' '+RES[k].toLowerCase())].filter(Boolean).join(' · ');
+const bar=v=>`<div class="bar ${v<30?'low':''}"><i style="width:${Math.max(0,Math.min(100,v))}%"></i></div>`;
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>e.hidden=true,2400)}
+function setArt(bg){const k=JSON.stringify(bg);if(k!=artKey){artKey=k;$('#art').innerHTML=scene(bg.kind,bg)}
+ $('#fx').className=(bg.rain?'rain ':'')+(bg.fog||bg.night&&!bg.rain?'fog':'');au.mode(bg.kind=='bunker'?'bunker':bg.night?'night':'day')}
+function typeText(text,cb){clearInterval(typer);const el=$('#txt');if(matchMedia('(prefers-reduced-motion:reduce)').matches){el.textContent=text;return cb()}
+ let i=0;const fin=()=>{clearInterval(typer);el.textContent=text;el.onclick=null;cb()};el.onclick=fin;typer=setInterval(()=>{el.textContent=text.slice(0,++i);if(i>=text.length)fin()},14)}
 function menu(){
- const r=G.records(),sv=G.hasSave();
- app.innerHTML=`<div class="menu"><h1>ÚLTIMOS DIAS</h1><p class="mut">Sobreviva ao maior número possível de dias.</p>
- <img src="assets/base.svg" alt="" style="width:100%;max-width:520px;border:1px solid #3a3a3a">
- <button data-a="cont" ${sv?'':'disabled'}>Continuar campanha</button><button data-a="new">Nova campanha</button>
- <button data-a="rec">Recordes e estatísticas</button><button data-a="imp">Importar campanha (JSON)</button>
- <input type="file" id="file" accept="application/json" hidden>
- ${view=='rec'?`<div class="card" style="text-align:left"><h2>Recordes</h2><p>Melhor: ${r.best} dias · Campanhas: ${r.games} · Dias totais: ${r.days}<br>Perdas: ${r.lost} · Ataques repelidos: ${r.repelled}<br>Última derrota: ${esc(r.last)}</p></div>`:''}
- <p class="mut">Progresso salvo automaticamente neste navegador.</p></div>`}
-
-function sv(v){
- const dead=v.dead||v.left,sel=squad.has(v.id)&&!dead;
- return`<div class="sv ${sel?'sel':''} ${dead?'dead':''}"><img src="assets/portrait.svg" alt="">
- <div><b>${esc(v.name)}</b> <small>${v.skill}${v.dead?' · morto':v.left?' · partiu':''}</small>
- ${dead?'':`<div>Saúde ${Math.round(v.health)}${bar(v.health)}Moral ${Math.round(v.morale)}${bar(v.morale)}<small>Lealdade ${Math.round(v.loyalty)} · Cmb ${v.combat} Exp ${v.exploration} Téc ${v.technique} Med ${v.medicine}</small>
- ${v.checked?`<br><small>Investigação: ${esc(v.checked)}</small>`:''}
- <div class="row"><button data-a="sq" data-i="${v.id}" aria-pressed="${sel}">${sel?'✔ Na expedição':'Enviar'}</button><button data-a="tr" data-i="${v.id}">Tratar (1 PT)</button><button data-a="inv" data-i="${v.id}">Investigar (2 PT)</button></div></div>`}</div></div>`}
-
-function over(){const st=S.stats;
- app.innerHTML=`<div class="menu"><h1>FIM</h1><section style="text-align:left"><h2>Você sobreviveu ${S.day} dias</h2><p><b>Causa:</b> ${esc(S.cause||'—')}</p>
- <p>Recrutados: ${st.recruited} · Perdidos: ${st.lost}<br>Recursos coletados: ${st.collected}<br>Ataques repelidos: ${st.repelled}<br>Expedições: ${st.expeditions} · Decisões: ${st.decisions}</p>
- <p class="mut">Semente: ${S.seed}</p></section>
- <section class="log" style="text-align:left"><h2>Últimos registros</h2>${logHtml(8)}</section>
- <button data-a="new">Nova campanha</button><button data-a="menu">Menu</button></div>`}
-
-function game(){
- if(S.gameOver)return over();
- const T=G.threat(S),E=S.event&&EVENTS.find(e=>e.id==S.event.id);
+ setArt({kind:'street',night:1,seed:7,fig:'l'});const r=G.records(),sv=G.hasSave();
+ $('#menu').innerHTML=`<h1>ÚLTIMOS DIAS</h1><p class="mut">Sobreviva ao maior número possível de dias.</p><button data-a="cont" ${sv?'':'disabled'}>Continuar campanha</button><button data-a="new">Nova campanha</button><button data-a="rec">Recordes</button><button data-a="imp">Importar campanha (JSON)</button><button data-a="snd">Som: ${au.isMuted()?'desligado':'ligado'}</button><input type="file" id="file" accept="application/json" hidden>${rec?`<div class="rec">Melhor: ${r.best} dias · Campanhas: ${r.games}<br>Dias totais: ${r.days} · Perdas: ${r.lost} · Repelidos: ${r.repelled}<br>Última derrota: ${esc(r.last)}</div>`:''}<p class="mut">Use fones de ouvido. Progresso salvo automaticamente.</p>`}
+function panelHtml(){
  const res=Object.entries(S.resources).map(([k,v])=>`<div>${RES[k]}<b>${v}</b></div>`).join('');
- const ev=E?(()=>{const o=E.opts(S,S.event.d,G.A);return`<section class="event"><h2>${E.title}</h2><p>${E.text(S,S.event.d)}</p><div class="acts">${o.map((x,i)=>`<button data-a="ev" data-i="${i}" ${x.off?'disabled':''}>${x.l}${x.pt?` · ${x.pt} PT`:''}</button>`).join('')}</div></section>`})():'';
- app.innerHTML=`<div class="top"><div class="stats"><b>Dia ${S.day}</b><span>Tempo ${S.time.remaining}/${S.time.total} PT</span><span>Ameaça ${T}/100</span><span>Segurança ${G.security(S)}</span><span>Estoque ${G.total(S)}/${G.cap(S)}</span></div><div class="res">${res}</div></div>
- ${toast?`<div class="toast" role="alert">${esc(toast)}</div>`:''}
- ${ev}
- <div class="grid"><div>
- <section class="scene"><img src="assets/base.svg" alt="Delegacia abandonada"><p class="mut">Delegacia abandonada${S.base.damage?` · dano ${S.base.damage}`:''}</p></section>
- <section><h2>Sobreviventes (${G.alive(S).length})</h2>${S.survivors.map(sv).join('')}</section></div>
- <div><section><h2>Explorar</h2><p class="mut">Toque em "Enviar" nos sobreviventes para formar a expedição. Quem sai não defende a base.</p><div class="acts">
- ${LOCS.map(l=>`<button data-a="loc" data-i="${l.id}">${l.name} · ${l.cost} PT<br><small>${riskTxt(l.risk)} · ${l.note}${S.visits[l.id]?` · visitas ${S.visits[l.id]}`:''}</small></button>`).join('')}</div></section>
- <section><h2>Base</h2><div class="acts">
- ${Object.entries(UPG).map(([id,u])=>{const own=!u.rep&&S.base.upgrades.includes(id);return`<button data-a="bld" data-i="${id}" ${own?'disabled':''}>${own?'✔ ':''}${u.name} · 3 PT<br><small>${costTxt(u.cost)}</small></button>`}).join('')}
- <button data-a="craft">Fabricar munição · 2 PT<br><small>3 materiais → 4 munições (exige oficina)</small></button>
- <button data-a="rep">Reparar estrutura · 2 PT<br><small>2 materiais, −12 de dano</small></button></div></section>
- <section><button data-a="end" style="width:100%;text-align:center">Encerrar dia ${S.day}</button></section></div></div>
- <section class="log"><h2>Registro</h2>${logHtml(14)}</section>
- <div class="row"><button data-a="menu">Menu</button><button data-a="exp">Exportar campanha (JSON)</button></div>`}
-
-const render=()=>view=='game'?game():menu();
-function act(fn){toast=fn()||'';G.reap(S);G.save(S);render()}
-function start(s){S=s;squad=new Set();toast='';view='game';G.save(S);render();scrollTo(0,0)}
-
-app.addEventListener('click',e=>{
- const b=e.target.closest('button');if(!b||b.disabled)return;const a=b.dataset.a,i=b.dataset.i;
- if(a=='cont'){const s=G.load();if(s)start(s)}
- else if(a=='new'){if((S&&S.gameOver)||!G.hasSave()||confirm('Iniciar nova campanha? O salvamento atual será substituído.'))start(G.newGame())}
- else if(a=='rec'){view=view=='rec'?'menu':'rec';menu()}
- else if(a=='imp')document.getElementById('file').click();
+ const svs=S.survivors.map(v=>`<div class="sv ${v.dead||v.left?'dead':''}">${portrait(v.look)}<div><b>${esc(v.name)}</b> · ${v.skill}${v.dead?' · morto':v.left?' · partiu':''}${v.dead||v.left?'':`<br>Saúde ${Math.round(v.health)}${bar(v.health)}Moral ${Math.round(v.morale)}${bar(v.morale)}<small>Lealdade ${Math.round(v.loyalty)} · Cmb ${v.combat} Exp ${v.exploration} Téc ${v.technique} Med ${v.medicine}${v.checked?'<br>Investigação: '+esc(v.checked):''}</small>`}</div></div>`).join('');
+ return`<h2>Estoque ${G.total(S)}/${G.cap(S)}</h2><div class="res">${res}</div><h2>Base</h2><p>Segurança ${G.security(S)} · Ameaça ${G.threat(S)}/100 · Dano ${S.base.damage}<br>${S.base.upgrades.length?S.base.upgrades.map(u=>UPG[u].name.split(' (')[0]).join(', '):'Sem melhorias'}</p><h2>Grupo (${G.alive(S).length}/${S.base.pop})</h2>${svs}<h2>Registro</h2><div class="lg">${S.history.slice(0,16).map(h=>`<p><span>Dia ${h.d}</span> ${esc(h.t)}</p>`).join('')}</div><h2>Sistema</h2><button data-a="exp">Exportar campanha (JSON)</button> <button data-a="menu">Menu</button>`}
+function hud(){const T=G.threat(S);$('#stats').innerHTML=`<b>DIA ${S.day||'—'}</b><span>Tempo ${S.time.remaining}/${S.time.total}</span><span>Água ${S.resources.water}</span><span>Comida ${S.resources.food}</span><span>Ameaça ${T}</span>`;if(!$('#panel').hidden)$('#panel').innerHTML=panelHtml()}
+function render(){
+ clearTimeout(cardT);stop&&stop();stop=null;clearInterval(typer);
+ const inGame=view=='game';$('#menu').hidden=inGame;$('#hud').hidden=!inGame;
+ if(!inGame){$('#box').hidden=true;$('#panel').hidden=true;$('#card').hidden=true;return menu()}
+ const d=ST.SC[S.sc.id](S,S.sc.ctx);setArt(d.bg);hud();
+ if(d.card){$('#box').hidden=true;const c=$('#card');c.hidden=false;c.innerHTML=`<span>${d.card}</span>`;au.sfx.sting();
+  const go=()=>{clearTimeout(cardT);c.hidden=true;d.next(S);G.save(S);render()};c.onclick=go;cardT=setTimeout(go,2700);return}
+ $('#card').hidden=true;$('#box').hidden=false;$('#ch').innerHTML='';$('#mini').innerHTML='';
+ if(d.mini){typeText(d.text,()=>{stop=runMini($('#mini'),d.mini,res=>{const c=S.sc.ctx;d.done(S,c,res);after()})});return}
+ typeText(d.text,()=>{$('#ch').innerHTML=d.choices.map((c,i)=>`<button data-c="${i}" ${c.off?'disabled':''}>${i+1}. ${esc(c.l)}${c.pt||c.res?` <small class="mut">[${cost(c)}]</small>`:''}</button>`).join('')})}
+function after(){G.reap(S);if(S.gameOver&&!['night','over'].includes(S.sc.id))ST.go(S,'over');G.save(S);render()}
+function choose(i){const d=ST.SC[S.sc.id](S,S.sc.ctx),c=d.choices&&d.choices[i];if(!c||c.off)return;au.sfx.click();
+ if(c.act)return c.act=='new'?newGame():(view='menu',render());
+ const e=ST.choose(S,i);if(e)return toast(e);
+ const n=S.sc.id;if(n=='monster')au.sfx.growl();if(n=='lone'&&S.sc.ctx.where=='gate'&&!S.sc.ctx.inv)au.sfx.knock();if(n=='night')au.sfx.heart();if(n=='dusk')au.sfx.danger();after()}
+function newGame(){S=G.newGame();view='game';G.save(S);render()}
+document.addEventListener('pointerdown',()=>au.init(),{once:true});
+document.addEventListener('keydown',e=>{if(view=='game'&&/^[1-9]$/.test(e.key)&&!$('#ch').hidden)choose(+e.key-1)});
+$('#ch').addEventListener('click',e=>{const b=e.target.closest('button');if(b)choose(+b.dataset.c)});
+$('#bPanel').onclick=()=>{const p=$('#panel');p.hidden=!p.hidden;if(!p.hidden)p.innerHTML=panelHtml()};
+$('#bSound').onclick=()=>{au.init();au.toggle()};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||b.disabled)return;const a=b.dataset.a;au.init();
+ if(a=='cont'){const s=G.load();if(s){S=s;view='game';render()}}
+ else if(a=='new'){if(!G.hasSave()||confirm('Iniciar nova campanha? O salvamento atual será substituído.'))newGame()}
+ else if(a=='rec'){rec=!rec;menu()}else if(a=='snd'){au.toggle();menu()}else if(a=='imp')$('#file').click();
  else if(a=='menu'){view='menu';render()}
- else if(a=='exp'){const u=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'})),l=document.createElement('a');l.href=u;l.download='ultimos-dias-dia'+S.day+'.json';l.click();URL.revokeObjectURL(u)}
- else if(a=='sq'){squad.has(+i)?squad.delete(+i):squad.add(+i);render()}
- else if(a=='tr')act(()=>G.treat(S,+i));
- else if(a=='inv')act(()=>G.investigate(S,+i));
- else if(a=='loc')act(()=>G.search(S,i,[...squad]));
- else if(a=='bld')act(()=>G.build(S,i));
- else if(a=='craft')act(()=>G.craft(S));
- else if(a=='rep')act(()=>G.repair(S));
- else if(a=='ev')act(()=>G.resolve(S,+i));
- else if(a=='end'){if(S.time.remaining>6&&!confirm('Ainda restam '+S.time.remaining+' PT. Encerrar o dia mesmo assim?'))return;act(()=>G.endDay(S))}
-});
-app.addEventListener('change',e=>{if(e.target.id!='file')return;const f=e.target.files[0];if(!f)return;
- f.text().then(t=>{const s=JSON.parse(t);G.validate(s)?start(s):alert('Arquivo de campanha inválido.')}).catch(()=>alert('Não foi possível ler o arquivo.'))});
-menu();
+ else if(a=='exp'){const u=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'})),l=document.createElement('a');l.href=u;l.download='ultimos-dias-dia'+S.day+'.json';l.click();URL.revokeObjectURL(u)}});
+document.addEventListener('change',e=>{if(e.target.id!='file')return;const f=e.target.files[0];if(f)f.text().then(t=>{const s=JSON.parse(t);if(G.validate(s)){S=s;view='game';render()}else alert('Arquivo inválido.')}).catch(()=>alert('Não foi possível ler o arquivo.'))});
+render();

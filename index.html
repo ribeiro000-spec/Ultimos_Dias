@@ -2,13 +2,22 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Últimos Dias</title>
 <link rel="icon" href="assets/favicon.svg">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<main id="app"></main>
+<div id="art" aria-hidden="true"></div><div id="fx" aria-hidden="true"></div>
+<header id="hud" hidden>
+ <div id="stats"></div>
+ <div class="btns"><button id="bSound" aria-label="Som">♪</button><button id="bPanel" aria-label="Mostrar informações">☰</button></div>
+</header>
+<main id="box" hidden><p id="txt" aria-live="polite"></p><div id="mini"></div><div id="ch"></div></main>
+<aside id="panel" hidden></aside>
+<div id="card" hidden></div>
+<div id="menu" hidden></div>
+<div id="toast" hidden></div>
 <script type="module" src="js/ui.js"></script>
 </body>
 </html>
