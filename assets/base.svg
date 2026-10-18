@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" role="img" aria-label="Delegacia abandonada ao anoitecer">
+<defs><pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="2"/></pattern></defs>
+<rect width="640" height="240" fill="#0a0a0a"/><circle cx="520" cy="50" r="26" fill="#e8e8e8"/><circle cx="530" cy="44" r="24" fill="#0a0a0a"/>
+<g fill="#161616" stroke="#555"><rect x="20" y="90" width="70" height="120"/><rect x="520" y="70" width="90" height="140"/><rect x="450" y="120" width="50" height="90"/></g>
+<rect x="130" y="80" width="340" height="130" fill="url(#h)" stroke="#ddd" stroke-width="2"/>
+<rect x="115" y="68" width="370" height="16" fill="#ddd"/>
+<g fill="#0a0a0a" stroke="#ddd" stroke-width="2"><rect x="160" y="110" width="50" height="40"/><rect x="390" y="110" width="50" height="40"/><rect x="280" y="130" width="50" height="80"/></g>
+<path d="M160 130h50M185 110v40M390 130h50M415 110v40" stroke="#ddd" stroke-width="2"/>
+<path d="M0 210h640" stroke="#ddd" stroke-width="2"/><path d="M60 210l20-14 14 14M560 210l-18-10-12 10" stroke="#888" fill="none"/>
+<text x="300" y="79" fill="#0a0a0a" font-family="Georgia" font-size="13" text-anchor="middle" font-weight="bold">POLÍCIA</text>
+</svg>
